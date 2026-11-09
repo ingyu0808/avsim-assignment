@@ -4,7 +4,6 @@
 - 카메라 영상 처리(OpenCV/CNN) + ROS2 제어
 - 판마다 미션 8개 무작위 배치
 - 팀 2~3명, 기간 4주
-- 문의: {{문의처}}
 - 자세한 안내: [안내서](docs/assignment/student-guide.md), [PDF](docs/assignment/student-handout.pdf)
 
 ## 환경
@@ -81,7 +80,6 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 
 ## 제출
 
-- 제출처: {{제출 경로}}
 - 제출물
   - `team_XX.zip`: `ros2_ws/src/team_XX` 통째로, `ros2 launch team_XX drive.launch.py`로 실행 가능해야 함
   - 보고서 PDF
