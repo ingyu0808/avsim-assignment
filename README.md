@@ -24,7 +24,7 @@ cd ros2_ws && colcon build --symlink-install && cd ..
 cd ros2_ws && colcon build --symlink-install --packages-select team_07 && cd ..
 ```
 
-- 작성할 곳: `team_07/team_07/perception.py`의 `decide()`
+- 작성할 곳: `team_07/team_07/driver.py`의 `decide()` → (속도, 조향각) 반환
 - 제출 대상: 이 팀 패키지
 - 업데이트: `git pull` → `./scripts/get-sim.sh` → `colcon build`
 
@@ -38,7 +38,8 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 
 - 시뮬레이터 옵션: `--seed N`(같은 판 재현), `--no-scenario`(미션 없는 판), `--headless`(창 없이)
 - 리셋: `ros2 service call /reset_simulation std_srvs/srv/Trigger`
-- 뼈대 그대로 실행 시: 신호·사람 무시, 5 m/s로 한 바퀴 후 정문 정지
+- 뼈대 그대로 실행 시: `/odom`으로 경로 추종, 5 m/s(곡선 감속), 신호·사람 무시, 한 바퀴 후 정문 정지
+- 경로 추종 도우미 `route.py`(조향각·곡선 감속 계산)는 선택. 차선을 직접 보고 조향해도 됨
 
 ## 토픽
 
@@ -48,15 +49,16 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
   - `/odom`: `Odometry`, 30 Hz, 정답 위치
   - `/imu/data`: `Imu`, 100 Hz
   - `/ultrasonic/front`·`rear`·`left`·`right`: `Range`, 20 Hz, 최대 4 m
-  - `/team/route_state`: `String`(JSON), 20 Hz. 진행 거리, 다음 신호 정지선 id·거리, 주행 상태
 - 출력
-  - `/team/speed_limit`: `Float32`, m/s(0 = 정지), 10 Hz 이상. 뼈대 `route_follower`가 이 속도 이하로 주행
-  - `/cmd_ackermann`: `AckermannDrive`. 뼈대가 발행. 직접 발행 시 한 노드에서만
-- 사용 금지: `/traffic_lights`, `/traffic_lights/positions`(신호 정답, 채점 때 미발행)
+  - `/cmd_ackermann`: `AckermannDrive`, 팀 노드가 직접 발행(한 노드에서만)
+    - `speed`: m/s, `steering_angle`: rad(양수 = 왼쪽, 최대 ±0.6)
+    - 0.5 s 넘게 명령이 없으면 차 정지
+  - `/team/route_state`: `String`(JSON), 디버깅용. 상태, 진행 거리, 경로 이탈 거리
+- 신호등 위치·색: 토픽 없음. 카메라로만 인식
 
 ## 미션
 
-- 신호등(정지선 13곳): 빨강·노랑이면 정지선 앞 정지
+- 신호등(정지선 7곳, 모두 교차로 진입 전): 빨강·노랑이면 정지선 앞 정지
 - 무작위 미션 8개(판마다 종류·위치 변경)
   - 늦게 건너는 사람, 무단횡단, 신호 없는 횡단보도, 가려진 아이: 정지
   - 서 있기만 하는 사람: 통과
@@ -90,4 +92,4 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 ## 규칙
 
 - 허용: 오픈소스, 사전학습 모델, 생성형 AI(보고서에 출처 기재)
-- 금지: 팀 간 코드 공유, 신호 정답 토픽 사용, 시뮬레이터 수정
+- 금지: 팀 간 코드 공유, 시뮬레이터 수정

@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
-from student_driver.perception import to_bgr
+from student_driver.driver import to_bgr
 
 
 def test_to_bgr_swaps_channels_and_drops_row_padding():

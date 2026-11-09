@@ -91,7 +91,7 @@ ros2 launch team_07 drive.launch.py
 |---|---|
 | 창은 떴는데 `ros2 topic list`에 `/camera/image_raw`가 없다 | 브릿지가 굳은 상태입니다. `systemctl --user restart avsim-ros-bridge` 후 다시 확인 |
 | `ros2 topic echo`가 `!rclpy.ok()` 오류를 낸다 | ROS 데몬 문제입니다. `ros2 daemon stop && ros2 daemon start` |
-| 차가 서서 `No fresh /team/speed_limit`를 출력한다 | perception 노드가 죽었거나 1초 넘게 발행하지 않았습니다 |
+| 차가 서 있고 `/cmd_ackermann`이 안 나온다 | 주행 노드가 죽었습니다. 터미널 2의 오류를 확인하세요 |
 | `RESET_POSE_MISMATCH`에서 멈춘다 | 다른 프로그램이 같은 ROS 도메인에 `/odom`을 내고 있습니다. `ROS_DOMAIN_ID`를 확인하세요 |
 | 창이 검게 멈춘다 (모니터 없는 PC) | `--headless`로 실행하세요 |
 
@@ -99,27 +99,27 @@ ros2 launch team_07 drive.launch.py
 
 ```
 team_07/
-├── team_07/route_follower.py   제공. /odom으로 경로를 따라 조향하고 속도를 정한다
-├── team_07/perception.py       여러분이 채울 곳. 판단 결과로 속도 상한을 보낸다
-├── team_07/control.py          route_follower의 속도 규칙 (테스트 포함)
-└── launch/drive.launch.py      두 노드를 함께 띄운다 (제출할 실행 파일)
+├── team_07/driver.py      여러분이 채울 노드. decide()가 (속도, 조향각)을 정하고 /cmd_ackermann을 직접 보낸다
+├── team_07/route.py       제공 도우미(노드 아님). /odom으로 고정 경로를 따라가는 조향각과 곡선·도착 감속을 계산
+├── team_07/control.py     route.py의 속도 규칙 (테스트 포함)
+└── launch/drive.launch.py 노드를 띄운다 (제출할 실행 파일)
 ```
 
-두 노드는 토픽 하나로만 이어집니다.
-
 ```
-카메라·초음파·/odom ──▶ perception ──/team/speed_limit──▶ route_follower ──/cmd_ackermann──▶ 차량
-                            ▲                                   │
-                            └────────── /team/route_state ◀─────┘
+카메라·초음파·/odom ──▶ driver (decide → 속도, 조향각) ──/cmd_ackermann──▶ 차량
+                           │  └ route.py: 경로 추종 조향각, 곡선·도착 감속 (선택)
+                           └──/team/route_state (디버깅용)
 ```
 
-- **`route_follower`(제공):** 정문에서 출발해 정문으로 돌아오는 경로를 `/odom`으로 따라갑니다. 곡선에서는 알아서 감속하고, 도착하면 멈춥니다.
-  - 속도는 `min(순항 속도 5 m/s, 곡선 속도, /team/speed_limit)`입니다.
-  - `/team/speed_limit`이 1초 넘게 안 오면 차를 세웁니다.
+- **`driver`(채울 곳):** 센서 구독, 영상 변환(`to_bgr`), 20 Hz 명령 발행까지 되어 있습니다. `decide()`만 채우면 됩니다.
+  - `decide()`는 이번 주기의 `(속도 m/s, 조향각 rad)`를 돌려줍니다. 조향각은 양수가 왼쪽이고 최대 ±0.6 rad입니다.
+  - 지금은 `route.py`가 계산한 조향각과 속도(순항 5 m/s, 곡선·도착 감속)를 그대로 돌려줍니다. 신호, 사람, 장애물은 무시합니다.
+  - 가속은 부드럽게(최대 약 1.2 m/s²) 올라가고, 감속은 바로 반영됩니다.
   - 순항 속도는 `ros2 launch team_07 drive.launch.py speed:=4.0`처럼 바꿀 수 있습니다(최대 6 m/s).
-- **`perception`(빈칸):** 센서 구독, 영상 변환(`to_bgr`), 10 Hz 발행까지 되어 있습니다. `decide()`만 채우면 됩니다.
-  - 지금은 항상 "제한 없음"(`NO_LIMIT`)을 돌려줍니다.
-  - 노드를 더 만들거나 `route_follower`를 고치거나 통째로 바꿔도 됩니다. 단, 실행은 `drive.launch.py` 하나로 되어야 합니다.
+- **`route.py`(제공, 선택):** 정문에서 출발해 정문으로 돌아오는 고정 경로를 `/odom`으로 따라갑니다.
+  - 출발할 때 `/reset_simulation`을 한 번 불러 차를 정문으로 보내고, 2초 뒤 출발합니다.
+  - 경로에서 2 m 넘게 벗어나면 영구 정지(`OFF_ROUTE`), `/odom`이 0.4 s 넘게 끊기면 잠시 정지(`STALE_ODOM`)합니다.
+  - 쓰지 않고 차선을 직접 보고 조향해도 됩니다. 노드를 더 만들거나 구조를 통째로 바꿔도 됩니다. 단, 실행은 `drive.launch.py` 하나로 되어야 하고 `/cmd_ackermann`은 한 노드만 발행해야 합니다.
 
 ## 5. ROS 인터페이스
 
@@ -132,41 +132,32 @@ team_07/
 | `/odom` | `nav_msgs/Odometry` | 30 Hz | **시뮬레이터 정답 위치**. x = 북, y = 서 |
 | `/imu/data` | `sensor_msgs/Imu` | 100 Hz | |
 | `/ultrasonic/front`, `/rear`, `/left`, `/right` | `sensor_msgs/Range` | 20 Hz | 최대 4 m |
-| `/team/route_state` | `std_msgs/String` (JSON) | 20 Hz | `route_follower`가 내는 진행 상황(아래) |
 
 카메라는 차량 기준점에서 앞으로 1.4 m, 위로 1.2 m에 있고 아래로 5° 숙여져 있습니다.
 
-`/team/route_state`의 JSON 필드는 다음과 같습니다.
-
-| 필드 | 뜻 |
-|---|---|
-| `progress_m`, `total_m` | 경로를 따라 온 거리, 전체 길이 (m) |
-| `next_signal_id`, `next_signal_distance_m` | 다음 신호 정지선의 신호 id와 남은 거리. 없으면 −1 |
-| `state` | 출발 준비(`WAIT_ODOM`, `WAIT_RESET_SERVICE`, `RESETTING`, `SETTLING`, 리셋 뒤 위치가 출발점과 3 m 넘게 다르면 `RESET_POSE_MISMATCH`), `DRIVING`, `COMPLETE`, `OFF_ROUTE`(경로에서 2 m 넘게 벗어나 영구 정지) |
-| `lateral_error_m`, `speed`, `command_speed` | 경로 이탈 거리, 현재 속도, 명령 속도 |
-
-신호 정지선 **위치**는 지도에 있어 알려 줍니다. 신호 **색**은 카메라로 직접 읽어야 합니다.
+**신호등의 위치와 색은 어떤 토픽으로도 주지 않습니다.** 카메라로 신호등을 찾고 색을 읽어야 합니다.
 
 ### 내보내는 출력
 
 | 토픽 | 타입 | 설명 |
 |---|---|---|
-| `/team/speed_limit` | `std_msgs/Float32` | 뼈대 기준. m/s, 0 = 정지. 10 Hz 이상 |
-| `/cmd_ackermann` | `ackermann_msgs/AckermannDrive` | 차량 제어. `speed`(m/s), `steering_angle`(rad, 양수 = 좌회전). 0.5 s 안에 새 명령이 없으면 차가 멈춥니다 |
+| `/cmd_ackermann` | `ackermann_msgs/AckermannDrive` | 차량 제어. `speed`(m/s), `steering_angle`(rad, 양수 = 왼쪽, 최대 ±0.6). 0.5 s 안에 새 명령이 없으면 차가 멈춥니다. 한 노드만 발행해야 합니다 |
+| `/team/route_state` | `std_msgs/String` (JSON) | 뼈대가 내는 디버깅용 상태. 채점에는 쓰지 않습니다 |
 
-`/cmd_ackermann`은 한 노드만 발행해야 합니다. 뼈대를 쓰면 `route_follower`가 발행합니다.
+`/team/route_state`의 JSON 필드는 다음과 같습니다.
 
-### 쓰면 안 되는 토픽
-
-`/traffic_lights`(신호 상태 정답)와 `/traffic_lights/positions`는 여러분 PC에서는 디버깅용으로
-나오지만, **채점할 때는 발행되지 않습니다.** 주행 코드가 이 토픽에 기대면 채점에서 신호를 보지 못합니다.
+| 필드 | 뜻 |
+|---|---|
+| `state` | 출발 준비(`WAIT_ODOM`, `WAIT_RESET_SERVICE`, `RESETTING`, `SETTLING`, 리셋 뒤 위치가 출발점과 3 m 넘게 다르면 `RESET_POSE_MISMATCH`), `DRIVING`, `STALE_ODOM`, `OFF_ROUTE`, `COMPLETE` |
+| `progress_m`, `total_m` | 경로를 따라 온 거리, 전체 길이 (m) |
+| `lateral_error_m`, `speed`, `command_speed` | 경로 이탈 거리, 현재 속도, 보낸 속도 명령 |
 
 ## 6. 주행 코스
 
 ![주행 코스](course-map.png)
 
-- **경로:** 정문에서 출발해 반시계 방향으로 캠퍼스를 한 바퀴 돌아 정문으로 돌아옵니다(1962 m). 경로는 고정이고 `route_follower`가 따라갑니다.
-- **신호:** 정지선이 13곳 있습니다. 그림의 번호가 `next_signal_id`입니다. 같은 교차로의 정지선은 번호를 묶어 표시했습니다.
+- **경로:** 정문에서 출발해 반시계 방향으로 캠퍼스를 한 바퀴 돌아 정문으로 돌아옵니다(1962 m). 경로는 고정이고 뼈대의 `route.py`가 따라가는 조향각을 계산해 줍니다.
+- **신호:** 신호 정지선이 7곳 있고, 모두 교차로에 들어가기 전에 있습니다. 교차로를 건넌 뒤에는 정지선이 없으므로 교차로 안에서 서지 마세요. 그림의 번호는 보고서에서 가리킬 때 쓰는 신호 번호입니다.
 - **완주:** 경로 끝(출발 지점 5 m 안)에 **멈추면** 완주입니다. 뼈대가 알아서 멈춥니다.
 - **시간 제한:** 1200 s. 넘기면 0점입니다. 신호와 미션 대기 시간이 있으므로, 달리는 동안은 적어도 2.5 m/s를 내는 것이 안전합니다.
 
@@ -289,7 +280,6 @@ team_07/
 - **쓸 수 있는 것:** 오픈소스 코드, 사전학습 모델(COCO 등), 시뮬레이터 영상으로 직접 만든 데이터로 학습·파인튜닝, 생성형 AI 도구. 보고서에 **출처와 사용 범위**를 밝혀야 합니다.
 - **안 되는 것:**
   - 다른 팀과 코드를 공유하는 것
-  - 신호 정답 토픽(`/traffic_lights`, `/traffic_lights/positions`)을 주행에 쓰는 것
   - 시뮬레이터 파일을 고치는 것
 - **시드와 결과 공유:** 다른 팀과 시드나 결과를 공유하는 것은 자유입니다. 채점 시드는 비공개입니다.
 - **재채점:**

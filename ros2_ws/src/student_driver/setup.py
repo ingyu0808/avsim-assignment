@@ -17,12 +17,11 @@ setup(
     zip_safe=True,
     maintainer="student",
     maintainer_email="student@example.com",
-    description="ERICA 캠퍼스 주행 과제 뼈대: 경로 추종과 빈 인식 노드",
+    description="ERICA 캠퍼스 주행 과제 뼈대: /cmd_ackermann을 직접 보내는 주행 노드와 경로 추종 도우미",
     license="MIT",
     entry_points={
         "console_scripts": [
-            "route_follower = student_driver.route_follower:main",
-            "perception = student_driver.perception:main",
+            "driver = student_driver.driver:main",
         ],
     },
 )

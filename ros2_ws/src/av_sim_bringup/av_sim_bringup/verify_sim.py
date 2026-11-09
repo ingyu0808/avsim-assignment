@@ -141,11 +141,8 @@ def main():
 
     print("\n=== 5b. 신호등 ===")
     node.spin_for(2.0)
-    check("신호등 상태 토픽 수신", node.traffic is not None,
-          node.traffic or "수신 없음")
-    if node.traffic:
-        states = {pair.split(":")[1] for pair in node.traffic.split(",") if ":" in pair}
-        check("유효한 신호 상태만 발행", states <= {"RED", "YELLOW", "GREEN"}, ", ".join(sorted(states)))
+    # 신호등의 위치와 색은 카메라로만 찾아야 하므로 정답 토픽이 나오면 안 된다.
+    check("신호 정답 토픽 없음", node.traffic is None, node.traffic or "수신 없음")
 
     print("\n=== 6. 리셋 서비스 ===")
     if not node.reset_client.wait_for_service(timeout_sec=5.0):

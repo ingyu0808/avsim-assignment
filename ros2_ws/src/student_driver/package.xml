@@ -3,7 +3,7 @@
 <package format="3">
   <name>student_driver</name>
   <version>0.1.0</version>
-  <description>ERICA 캠퍼스 주행 과제 뼈대: 경로 추종과 빈 인식 노드</description>
+  <description>ERICA 캠퍼스 주행 과제 뼈대: /cmd_ackermann을 직접 보내는 주행 노드와 경로 추종 도우미</description>
   <maintainer email="student@example.com">student</maintainer>
   <license>MIT</license>
 

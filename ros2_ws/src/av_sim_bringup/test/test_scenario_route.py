@@ -12,8 +12,14 @@ def test_route_matches_lap_and_signals():
     out = export_route(load_map(MAP))
     assert 1900 < out["length"] < 2050
     assert len(out["points"]) == len(out["roadCenters"]) == len(out["roadHalfWidths"])
-    assert [s["id"] for s in out["signals"]] == [4, 7, 11, 18, 13, 22, 21, 28, 27, 34, 39, 2, 5]
+    assert [s["id"] for s in out["signals"]] == [3, 4, 10, 12, 15, 18, 2]
     assert all(0 < s["crossS"] - s["stopS"] < 6 for s in out["signals"])
+
+
+def test_no_stop_line_right_after_crossing_an_intersection():
+    # Only approach-side stop lines: none on the exit crosswalk ~20 m past the one before.
+    stops = [s["stopS"] for s in export_route(load_map(MAP))["signals"]]
+    assert all(b - a > 30 for a, b in zip(stops, stops[1:]))
 
 
 def test_straights_are_long_and_ordered():
