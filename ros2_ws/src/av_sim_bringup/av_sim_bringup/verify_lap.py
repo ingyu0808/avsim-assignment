@@ -1,4 +1,4 @@
-"""Record a real ROS lap. Ground truth is an evaluation oracle ONLY in this node."""
+"""Record a real ROS lap of the reference autonomy stack. Signal colors come only from the camera."""
 
 import argparse
 from collections import Counter
@@ -27,16 +27,12 @@ def main():
     directory.mkdir(parents=True, exist_ok=True)
     rclpy.init()
     node = rclpy.create_node("verify_lap")
-    status, perception, truth, frames = {}, {}, {}, {}
-    counts, modes, agreement = Counter(), Counter(), Counter()
+    status, perception, frames = {}, {}, {}
+    counts, modes = Counter(), Counter()
     snapshots, stopped, entered = set(), set(), {}
     last = [0.0, 0.0]
     started = time.monotonic()
     log = (directory / "telemetry.jsonl").open("w", encoding="utf-8")
-
-    def on_truth(msg):
-        truth.clear()
-        truth.update({int(item.split(":")[0]): item.split(":")[1] for item in msg.data.split(",")})
 
     def on_perception(msg):
         perception.clear()
@@ -45,10 +41,6 @@ def main():
         for field in ("lane_confidence", "stopline_distance", "crosswalk_distance"):
             if perception[field] > 0:
                 counts[field] += 1
-        color = perception["signal"]
-        oracle = truth.get(perception["signal_id"])
-        if oracle and color != "UNKNOWN":
-            agreement["match" if oracle == color else "mismatch"] += 1
 
     def on_status(msg):
         status.clear()
@@ -59,10 +51,10 @@ def main():
             if abs(status["speed"]) < 0.15 and signal >= 0:
                 stopped.add(signal)
         if signal >= 0 and status["stop_distance"] < 2.05 and signal not in entered:
-            entered[signal] = dict(progress_m=status["progress_m"], image=status["signal"], oracle=truth.get(signal))
+            entered[signal] = dict(progress_m=status["progress_m"], image=status["signal"])
         now = time.monotonic()
         if now - last[0] > 0.25:
-            log.write(json.dumps(dict(status=status, perception=perception, oracle=truth.get(signal))) + "\n")
+            log.write(json.dumps(dict(status=status, perception=perception)) + "\n")
             log.flush()
             last[0] = now
         key = f"{signal}_{mode}"
@@ -72,7 +64,6 @@ def main():
             snapshots.add(key)
             last[1] = now
 
-    node.create_subscription(String, "/traffic_lights", on_truth, 1)
     node.create_subscription(String, "/perception/road", on_perception, 1)
     node.create_subscription(String, "/autonomy/status", on_status, 1)
     for name, topic in (("debug", "/perception/debug_image"), ("bev", "/perception/birdseye")):
@@ -86,7 +77,7 @@ def main():
         except KeyboardInterrupt:
             pass
         result = dict(completed=status.get("completed", False), final=status, detections=dict(counts),
-                      modes=dict(modes), image_oracle_agreement=dict(agreement),
+                      modes=dict(modes),
                       stopped_signal_ids=sorted(stopped), stopline_entries=entered)
         if args.scenario_result:
             # Unity는 완주 정지, 리셋, 종료 때만 결과를 쓴다.

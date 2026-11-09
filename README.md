@@ -37,7 +37,7 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 
 - 시뮬레이터 옵션: `--seed N`(같은 판 재현), `--no-scenario`(미션 없는 판), `--headless`(창 없이)
 - 리셋: `ros2 service call /reset_simulation std_srvs/srv/Trigger`
-- 뼈대 그대로 실행 시: `/odom`으로 경로 추종, 5 m/s(곡선 감속), 신호·사람 무시, 한 바퀴 후 정문 정지
+- 뼈대 그대로 실행 시: `/odom`으로 경로 추종, 5 m/s(곡선 감속), 신호·사람·장애물 무시, 한 바퀴 후 정문 정지
 - 경로 추종 도우미 `route.py`(조향각·곡선 감속 계산)는 선택. 차선을 직접 보고 조향해도 됨
 
 ## 토픽
