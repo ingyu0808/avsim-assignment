@@ -1,0 +1,8 @@
+# colcon 빌드 결과
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+__pycache__/
+# 시뮬레이터는 저장소에 없습니다. ./scripts/get-sim.sh 로 받습니다.
+UnitySim/Build/
+.get-sim.*
