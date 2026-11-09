@@ -3,7 +3,6 @@
 - 시뮬레이터 속 한양대 ERICA 캠퍼스 한 바퀴(1962 m) 자율주행
 - 카메라 영상 처리(OpenCV/CNN) + ROS2 제어
 - 판마다 미션 8개 무작위 배치
-- 팀 2~3명, 기간 4주
 - 자세한 안내: [안내서](docs/assignment/student-guide.md), [PDF](docs/assignment/student-handout.pdf)
 
 ## 환경
