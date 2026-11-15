@@ -25,7 +25,7 @@ import rclpy
 from ackermann_msgs.msg import AckermannDrive
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import CameraInfo, Image, Range
 from std_msgs.msg import String
 
@@ -33,6 +33,10 @@ from .control import ramp
 from .route import CampusRoute
 
 MAX_STEERING = 0.60
+# 카메라 이미지(약 900 KB)는 RELIABLE로 받습니다. qos_profile_sensor_data(best effort)로 받으면
+# 큰 메시지가 자주 빠져 20 Hz가 10~16 Hz로 떨어지고 0.5 s까지 끊깁니다.
+# depth=1이라 처리가 느려도 밀린 옛 프레임 없이 항상 최신 프레임을 받습니다.
+CAMERA_QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 
 
 def to_bgr(msg):
@@ -55,8 +59,8 @@ class Driver(Node):
         self.command_speed = 0.0
         self.command = self.create_publisher(AckermannDrive, "/cmd_ackermann", 1)
         self.state_output = self.create_publisher(String, "/team/route_state", 1)
-        self.create_subscription(Image, "/camera/image_raw", self.on_image, qos_profile_sensor_data)
-        self.create_subscription(CameraInfo, "/camera/camera_info", self.on_info, qos_profile_sensor_data)
+        self.create_subscription(Image, "/camera/image_raw", self.on_image, CAMERA_QOS)
+        self.create_subscription(CameraInfo, "/camera/camera_info", self.on_info, CAMERA_QOS)
         self.create_subscription(Odometry, "/odom", self.route.on_odom, qos_profile_sensor_data)
         self.create_subscription(Range, "/ultrasonic/front", self.on_range, qos_profile_sensor_data)
         self.create_timer(0.05, self.tick)

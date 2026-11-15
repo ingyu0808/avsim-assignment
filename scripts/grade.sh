@@ -78,7 +78,7 @@ for SEED in "${SEEDS[@]}"; do
     setsid bash -c "$LAUNCH" > "$OUT/$SEED-student.log" 2>&1 &
     STUDENT=$!
     START=$(date +%s)
-    while ! is_final "$RESULT" && [[ $(( $(date +%s) - START )) -lt 1500 ]]; do sleep 2; done
+    while ! is_final "$RESULT" && [[ $(( $(date +%s) - START )) -lt 1800 ]]; do sleep 2; done
     stop_group "$STUDENT"
     stop_group "$PLAYER"
     is_final "$RESULT" || { echo "seed $SEED: 최종 결과 없음 (0점 처리)"; rm -f "$RESULT"; }

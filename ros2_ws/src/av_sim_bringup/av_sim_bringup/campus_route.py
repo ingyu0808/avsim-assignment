@@ -52,9 +52,11 @@ def campus_lap(data, corner_trim=6.0):
     points = np.array(nodes)
     rows, cols = zip(*edges)
     graph = csr_matrix((list(edges.values()), (rows, cols)), shape=(len(nodes), len(nodes)))
-    # Gate, divided entrance avenue, administration/lake, south road, east road, gate.
+    # Gate, divided entrance avenue, administration/lake, the curving north road, the west
+    # ring road and its corners, south road, east road, gate.
     anchors_xz = [(194.29, 393.34), (131.11, 359.8), (-89.1, 247.11),
-                  (-242.71, 164.11), (-8.97, -288.35), (362.37, -91.81),
+                  (-165.0, 395.0), (-275.0, 318.0), (-242.71, 164.11),
+                  (-457.0, -6.0), (-246.0, -369.0), (-8.97, -288.35), (362.37, -91.81),
                   (131.11, 359.8), (194.29, 393.34)]
     anchors = [int(np.argmin(np.linalg.norm(points - [z, -x], axis=1))) for x, z in anchors_xz]
     chain = [anchors[0]]
@@ -95,9 +97,11 @@ def campus_lap(data, corner_trim=6.0):
     distance = np.r_[0, np.cumsum(np.linalg.norm(np.diff(rounded, axis=0), axis=1))]
     samples = np.arange(0, distance[-1], 0.5)
     path = np.column_stack([np.interp(samples, distance, rounded[:, k]) for k in range(2)])
+    # Start in the inbound gate lane, finish in the outbound one (maps without a finish return to the spawn).
     spawn = xyz(data["spawn"])[:2]
+    finish = xyz(data.get("finish", data["spawn"]))[:2]
     first = np.argmin(np.linalg.norm(path[:100] - spawn, axis=1))
-    last = len(path) - 100 + np.argmin(np.linalg.norm(path[-100:] - spawn, axis=1))
+    last = len(path) - 100 + np.argmin(np.linalg.norm(path[-100:] - finish, axis=1))
     path = path[first:last + 1]
     return path
 

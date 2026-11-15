@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from av_sim_bringup.campus_route import campus_lap, load_map
@@ -10,10 +11,23 @@ MAP = Path(__file__).parents[1] / "config/campus_map.json"
 
 def test_route_matches_lap_and_signals():
     out = export_route(load_map(MAP))
-    assert 1900 < out["length"] < 2050
+    assert 2650 < out["length"] < 2800
     assert len(out["points"]) == len(out["roadCenters"]) == len(out["roadHalfWidths"])
-    assert [s["id"] for s in out["signals"]] == [3, 4, 10, 12, 15, 18, 2]
+    assert [s["id"] for s in out["signals"]] == [1, 3, 4, 8, 19, 2]
     assert all(0 < s["crossS"] - s["stopS"] < 6 for s in out["signals"])
+
+
+def test_lap_runs_from_the_gate_start_to_the_gate_finish():
+    data = load_map(MAP)
+    lap = campus_lap(data)
+    spawn, finish = (np.array([data[key]["x"], data[key]["y"]]) for key in ("spawn", "finish"))
+    assert np.linalg.norm(lap[0] - spawn) < 1.0
+    assert np.linalg.norm(lap[-1] - finish) < 1.0
+
+
+def test_car_starts_right_before_the_gate_crosswalk_signal():
+    first = export_route(load_map(MAP))["signals"][0]
+    assert first["id"] == 1 and 1.5 < first["stopS"] < 5
 
 
 def test_no_stop_line_right_after_crossing_an_intersection():

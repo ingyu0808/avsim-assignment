@@ -1,6 +1,12 @@
-"""sensor_msgs/Image decoding shared by tools and perception."""
+"""sensor_msgs/Image decoding and QoS shared by tools and perception."""
 
 import numpy as np
+from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+# Camera images (~900 KB) must be received RELIABLE. With best effort (qos_profile_sensor_data)
+# DDS drops large samples: 10-16 Hz with gaps up to 0.5 s instead of 20 Hz. Depth 1 keeps only
+# the newest frame, so slow processing never works on a backlog.
+CAMERA_QOS = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE)
 
 
 def decode_rgb(message):

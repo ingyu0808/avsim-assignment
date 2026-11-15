@@ -8,18 +8,17 @@ import time
 
 import cv2
 import rclpy
-from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 
 from .scenario_score import format_table, summarize, wait_for_result
-from .image import decode_rgb
+from .image import CAMERA_QOS, decode_rgb
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="/tmp/erica-lap")
-    parser.add_argument("--timeout", type=float, default=1200)
+    parser.add_argument("--timeout", type=float, default=1500)
     parser.add_argument("--scenario-result", help="Unity -scenarioResult 경로. 주행 후 점수를 합친다")
     args = parser.parse_args()
     started_wall = time.time()
@@ -67,7 +66,7 @@ def main():
     node.create_subscription(String, "/perception/road", on_perception, 1)
     node.create_subscription(String, "/autonomy/status", on_status, 1)
     for name, topic in (("debug", "/perception/debug_image"), ("bev", "/perception/birdseye")):
-        node.create_subscription(Image, topic, lambda msg, key=name: frames.update({key: decode_rgb(msg)}), qos_profile_sensor_data)
+        node.create_subscription(Image, topic, lambda msg, key=name: frames.update({key: decode_rgb(msg)}), CAMERA_QOS)
     try:
         try:
             while time.monotonic() - started < args.timeout:

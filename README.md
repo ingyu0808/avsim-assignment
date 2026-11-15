@@ -1,6 +1,6 @@
 # ERICA 캠퍼스 자율주행 과제
 
-- 시뮬레이터 속 한양대 ERICA 캠퍼스 한 바퀴(1962 m) 자율주행
+- 시뮬레이터 속 한양대 ERICA 캠퍼스 한 바퀴(2734 m, 곡선 구간 포함) 자율주행
 - 카메라 영상 처리(OpenCV/CNN) + ROS2 제어
 - 판마다 미션 8개 무작위 배치
 - 자세한 안내: [안내서](docs/assignment/student-guide.md), [PDF](docs/assignment/student-handout.pdf)
@@ -37,13 +37,15 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 
 - 시뮬레이터 옵션: `--seed N`(같은 판 재현), `--no-scenario`(미션 없는 판), `--headless`(창 없이)
 - 리셋: `ros2 service call /reset_simulation std_srvs/srv/Trigger`
-- 뼈대 그대로 실행 시: `/odom`으로 경로 추종, 5 m/s(곡선 감속), 신호·사람·장애물 무시, 한 바퀴 후 정문 정지
+- 출발: 정문 도로 끝, 정문 횡단보도 신호 바로 앞. 도착: 한 바퀴 뒤 정문 나가는 차로
+- 뼈대 그대로 실행 시: `/odom`으로 경로 추종, 5 m/s(곡선 감속), 신호·사람·장애물 무시, 한 바퀴 후 도착 지점 정지
 - 경로 추종 도우미 `route.py`(조향각·곡선 감속 계산)는 선택. 차선을 직접 보고 조향해도 됨
 
 ## 토픽
 
 - 입력
   - `/camera/image_raw`: `Image`, rgb8 640×480, 20 Hz, 전방 카메라
+    - 구독 QoS는 RELIABLE, depth 1(뼈대의 `CAMERA_QOS`). `qos_profile_sensor_data`(best effort)는 큰 이미지가 빠져 10~16 Hz로 끊김
   - `/camera/camera_info`: `CameraInfo`, fx = fy = 320, 수평 화각 90°
   - `/odom`: `Odometry`, 30 Hz, 정답 위치
   - `/imu/data`: `Imu`, 100 Hz
@@ -57,7 +59,7 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
 
 ## 미션
 
-- 신호등(정지선 7곳, 모두 교차로 진입 전): 빨강·노랑이면 정지선 앞 정지
+- 신호등(정지선 6곳: 출발 직후 정문 횡단보도 1곳 + 교차로 진입 전 5곳): 빨강·노랑이면 정지선 앞 정지
 - 무작위 미션 8개(판마다 종류·위치 변경)
   - 늦게 건너는 사람, 무단횡단, 신호 없는 횡단보도, 가려진 아이: 정지
   - 서 있기만 하는 사람: 통과
@@ -73,7 +75,7 @@ ros2 launch team_07 drive.launch.py      # 터미널 2: 주행 스택
   - 보고서: 20%
   - 발표·영상(5주차): 10%
 - 한 판 점수: 100점에서 감점
-  - 충돌, 1200 s 초과, 미완주: 그 판 0점
+  - 충돌, 1500 s 초과, 미완주: 그 판 0점
   - 양보 위반, 신호 위반: −20
   - 보호구역 과속: −10
   - 불필요 정지, 보행자 근접: −5
