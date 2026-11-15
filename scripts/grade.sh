@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
-# 교수자용: 학생 주행 스택을 비공개 시드 여러 개로 돌려 시나리오 점수를 평균낸다.
+# 주행 스택을 시드 여러 개로 차례로 돌려 판마다 결과 파일을 모으고 요약한다 (학생 자가 점검, 교수자 채점 공용).
 #
 #   ./scripts/grade.sh --launch "ros2 launch my_pkg drive.launch.py" [--out DIR] SEED...
 #   ./scripts/grade.sh --launch "..." [--out DIR] --no-scenario     # 중간 점검: 이벤트 없는 판 1회
+#   [--player-arg ARG]  플레이어 실행 인자를 더한다 (여러 번 쓸 수 있음)
 #
 # 시드마다 플레이어를 새로 띄우고, 학생 명령을 실행한 뒤 결과 파일이 생기거나
 # 1500 s가 지나면 둘 다 종료한다. 결과는 DIR/<seed>.json (중간 점검은 DIR/midterm.json) 에 남는다.
-# 플레이어는 채점 모드(-grading)로 떠서 신호 정답 토픽을 발행하지 않는다.
+# 플레이어는 -grading 인자로 뜬다.
 # 창 없이(-batchmode) GPU로 렌더링하므로 모니터가 없어도 된다.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LAUNCH=""
 OUT="/tmp/avsim-grade-$(date +%Y%m%d-%H%M%S)"
 SEEDS=()
+PLAYER_ARGS=()
 MIDTERM=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --launch) LAUNCH="$2"; shift 2 ;;
         --out) OUT="$2"; shift 2 ;;
+        --player-arg) PLAYER_ARGS+=("$2"); shift 2 ;;
         --no-scenario) MIDTERM=true; shift ;;
         *) SEEDS+=("$1"); shift ;;
     esac
@@ -61,7 +64,7 @@ for SEED in "${SEEDS[@]}"; do
     for ATTEMPT in 1 2; do
         # 오래 켜 둔 브릿지는 메시지를 버리는 상태로 굳을 수 있어 판마다 새로 띄운다.
         systemctl --user restart avsim-ros-bridge.service 2>/dev/null || true
-        setsid "$ROOT/scripts/run-sim.sh" "${ROUND[@]}" --headless --result "$RESULT" -grading >> "$OUT/$SEED-player.log" 2>&1 &
+        setsid "$ROOT/scripts/run-sim.sh" "${ROUND[@]}" --headless --result "$RESULT" -grading "${PLAYER_ARGS[@]}" >> "$OUT/$SEED-player.log" 2>&1 &
         PLAYER=$!
         for _ in $(seq 60); do
             kill -0 "$PLAYER" 2>/dev/null || break
