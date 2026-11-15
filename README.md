@@ -9,7 +9,7 @@
 ## 환경
 
 - Ubuntu 22.04, ROS2 Humble, NVIDIA GPU
-- 시스템 Python 3.10 (conda는 끄고 사용: `conda deactivate`)
+- 시스템 Python 3.10
 
 ## 설치
 

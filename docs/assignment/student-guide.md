@@ -16,7 +16,7 @@
 | OS | Ubuntu 22.04 (WSL, macOS, Windows는 지원하지 않습니다) |
 | ROS | ROS2 Humble (`/opt/ros/humble`) |
 | GPU | NVIDIA GPU와 드라이버. 카메라 영상을 GPU로 렌더링합니다 |
-| Python | 시스템 Python 3.10. **conda를 켠 터미널에서는 ROS 명령이 깨지므로 끄고 쓰세요** (`conda deactivate`) |
+| Python | 시스템 Python 3.10 |
 
 ### 설치
 
