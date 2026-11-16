@@ -33,6 +33,7 @@ source /opt/ros/humble/setup.bash && source ros2_ws/install/setup.bash   # 두 �
 ros2 launch my_driver drive.launch.py    # 터미널 2: 직접 만든 주행 노드
 ```
 
+- 영상 처리 창: 주행할 때 시뮬레이터 창과 함께 띄울 것. 인식 결과뿐 아니라 영상 처리 과정도 보이게
 - 시뮬레이터 옵션: `--seed N`(같은 판 재현), `--no-scenario`(미션 없는 판), `--headless`(창 없이), `--result PATH`(결과 파일)
 - 리셋: `ros2 service call /reset_simulation std_srvs/srv/Trigger` (출발 지점으로, 새 판, `/odom` 원점)
 - 출발: 정문 도로 끝, 정문 횡단보도 신호 바로 앞. 도착: 한 바퀴 뒤 정문 나가는 차로에 정지
