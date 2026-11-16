@@ -36,7 +36,8 @@ ros2 launch my_driver drive.launch.py    # 터미널 2: 직접 만든 주행 노
 - 시뮬레이터 옵션: `--seed N`(같은 판 재현), `--no-scenario`(미션 없는 판), `--headless`(창 없이), `--result PATH`(결과 파일)
 - 리셋: `ros2 service call /reset_simulation std_srvs/srv/Trigger` (출발 지점으로, 새 판, `/odom` 원점)
 - 출발: 정문 도로 끝, 정문 횡단보도 신호 바로 앞. 도착: 한 바퀴 뒤 정문 나가는 차로에 정지
-- 시간 제한: 1500 s
+- 시간 제한: 1500 s (판이 만들어질 때부터 잼. 노드·모델을 띄우는 시간 포함)
+- 속도 제한: 어린이보호구역 안만 (밖에는 없음)
 
 ## 토픽
 
@@ -49,11 +50,13 @@ ros2 launch my_driver drive.launch.py    # 터미널 2: 직접 만든 주행 노
     - `odom` → `base_link`, 출발·리셋 위치가 원점, 출발 방향이 +x
     - 미끄러짐·경사·조향 오차가 쌓임
   - `/imu/data`: `Imu`, 100 Hz, 자세(지도 기준 절대 자세)·각속도·가속도, 잡음 없음
-  - `/ultrasonic/front`·`rear`·`left`·`right`: `Range`, 20 Hz, 최대 4 m
+  - `/ultrasonic/front`·`rear`·`left`·`right`: `Range`, 20 Hz, 15° 부채꼴, 최대 4 m (아무것도 없으면 4.0)
 - 출력
   - `/cmd_ackermann`: `AckermannDrive`, 한 노드에서만 발행
     - `speed`: m/s, `steering_angle`: rad(양수 = 왼쪽, 최대 약 ±0.6)
     - 0.5 s 넘게 명령이 없으면 차 정지
+    - 속도 상한 없음. `speed = 0`이면 네 바퀴 브레이크(5 m/s에서 약 2 m 만에 정지)
+    - 0이 아닌 낮은 속도로 줄이면 모터로만 감속해 느림(5 → 2.6 m/s에 약 3 s, 9 m)
 - 서비스: `/reset_simulation` (`std_srvs/Trigger`)
 - 신호등 위치·색: 토픽 없음. 카메라로만 인식
 - `/tf` 없음
@@ -70,11 +73,12 @@ ros2 launch my_driver drive.launch.py    # 터미널 2: 직접 만든 주행 노
   - 늦게 건너는 사람, 무단횡단, 신호 없는 횡단보도, 가려진 아이: 정지
   - 서 있기만 하는 사람: 통과
   - 끼어드는 차: 따라가다 정지, 출발하면 다시 따라감
-  - 정차 차량·공사 콘: 정지(5~15 s 뒤 치워짐)
+  - 정차 차량·공사 콘: 가까이 와서 정지(앞 범퍼 기준 정차 차량 뒤 약 16 m, 첫 콘 약 10 m 안) → 5~15 s 뒤 치워짐
   - 어린이보호구역: 10 km/h 이하
 
 ## 스스로 점검
 
 - 결과 파일: `./scripts/run-sim.sh --result /tmp/run.json` → 주행 후 `/usr/bin/python3 scripts/scenario_average.py /tmp/run.json`
 - 여러 시드를 창 없이: `./scripts/grade.sh --launch "ros2 launch my_driver drive.launch.py" 11 22 33`
+- 결과는 `/tmp/avsim-grade-<날짜-시각>/`(시드별 JSON, 노드 로그, `summary.txt`)
 - 위반 기준: [안내서 6절](docs/assignment/student-guide.md#6-스스로-점검하기)
